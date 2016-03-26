@@ -13,10 +13,10 @@ class Form(QWidget):
         self.serial_port = QSerialPort()
         self.buffer = ""
 
-        self.read_timer = QTimer()
-        self.read_timer.setInterval(10)
-        self.read_timer.setSingleShot(True)
-        self.read_timer.timeout.connect(self.read_proceed)
+        self.serial_read_timer = QTimer()
+        self.serial_read_timer.setInterval(10)
+        self.serial_read_timer.setSingleShot(True)
+        self.serial_read_timer.timeout.connect(self.read_after_connect_proceed)
 
         # device selection
         lay_connect = QHBoxLayout()
@@ -45,6 +45,9 @@ class Form(QWidget):
         self.edt_human = QLineEdit()
         lay_punch_human.addWidget(self.edt_human)
         self.btn_punch_human = QPushButton("Lesbare Zeichen stanzen")
+        self.btn_punch_human.setEnabled(False)
+        self.btn_punch_human.clicked.connect(self.punch_human_readable)
+        lay_punch_human.addWidget(self.btn_punch_human)
 
         # punch file in ASCII with parity bit or binary section
         lay_punch_file = QHBoxLayout()
@@ -55,10 +58,11 @@ class Form(QWidget):
         self.edt_filename = QLineEdit()
         lay_punch_file.addWidget(self.edt_filename)
         self.btn_punch_ascii = QPushButton("7-Bit ASCII mit Paritätsbit stanzen")
+        self.btn_punch_ascii.setEnabled(False)
         self.btn_punch_binary = QPushButton("Binärdaten stanzen")
+        self.btn_punch_binary.setEnabled(False)
         lay_punch_file.addWidget(self.btn_punch_ascii)
         lay_punch_file.addWidget(self.btn_punch_binary)
-        lay_punch_human.addWidget(self.btn_punch_human)
 
         # horizontal line
         self.h_line_2 = QFrame()
@@ -72,6 +76,9 @@ class Form(QWidget):
         lay_main.addWidget(self.lbl_debug)
         self.edt_debug = QPlainTextEdit()
         self.edt_debug.setReadOnly(True)
+        dbg_font = self.edt_debug.font()
+        dbg_font.setFamily("Courier")
+        self.edt_debug.setFont(dbg_font)
         lay_main.addWidget(self.edt_debug)
 
         # initialize all the things
@@ -92,6 +99,14 @@ class Form(QWidget):
         filename, _ = QFileDialog.getOpenFileName(self, "Datei auswählen")
         if filename != "":
             self.edt_filename.setText(filename)
+
+    def punch_human_readable(self):
+        self.serial_read_timer.timeout.disconnect()
+        self.serial_read_timer.timeout.connect(self.read_debugging_output)
+        self.serial_port.write("h")
+        characters = bytes(self.edt_human.text(), encoding="ascii")
+        self.serial_port.write(characters)
+        #self.serial_port.write(chr(255))
 
     # search for available serial ports and fill the QComboBox
     def fill_port_selector(self):
@@ -115,7 +130,7 @@ class Form(QWidget):
                 self.btn_connect.setEnabled(False)
                 self.type_selector.setEnabled(False)
                 self.port_selector.setEnabled(False)
-                self.serial_port.readyRead.connect(self.read_serial)
+                self.serial_port.readyRead.connect(self.serial_read)
                 self.serial_port.write(chr(255))     # send something to get the menu
             else:
                 self.edt_debug.appendPlainText("Fehler")
@@ -123,15 +138,25 @@ class Form(QWidget):
             self.edt_debug.appendPlainText("kein gültiger Port")
 
     # This slot is called whenever new data is available for read.
-    def read_serial(self):
+    def serial_read(self):
         data = self.serial_port.read(self.serial_port.bytesAvailable())
         assert isinstance(data, bytes)
         for character in data:
             self.buffer += str(chr(character))
-        self.read_timer.start()
+        self.serial_read_timer.start()
 
-    def read_proceed(self):
-        self.edt_debug.appendPlainText(self.buffer)
+    def read_after_connect_proceed(self):
+        # turn off simulation mode if active
+        # if "Toggle (S)imulation mode: currently on" in self.buffer:
+        #     self.serial_port.write("s")
+        # else:
+        self.btn_punch_binary.setEnabled(True)
+        self.btn_punch_ascii.setEnabled(True)
+        self.btn_punch_human.setEnabled(True)
+        self.read_debugging_output()
+
+    def read_debugging_output(self):
+        self.edt_debug.appendPlainText(self.buffer.rstrip())
         self.buffer = ""
 
     # save settings
