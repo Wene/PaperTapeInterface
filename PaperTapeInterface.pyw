@@ -106,10 +106,11 @@ class Form(QWidget):
             self.edt_filename.setText(filename)
 
     def punch_human_readable(self):
-        self.lock_send_buttons()
-        self.serial_port.write("h")
         characters = bytes(self.edt_human.text(), encoding="ascii")   # TODO: find a way to ignore non ASCII characters
-        self.serial_port.write(characters)
+        if len(characters) > 0:
+            self.lock_send_buttons()
+            self.serial_port.write("h")
+            self.serial_port.write(characters)
 
     def punch_ascii(self):
         self.lock_send_buttons()
@@ -118,13 +119,13 @@ class Form(QWidget):
     def punch_binary(self):
         filename = self.edt_filename.text()
         if filename != "":
+            self.lock_send_buttons()
             try:
-                self.lock_send_buttons()
-                with open(filename, "rb") as file:
-                    data = chr("b")
-                    while data != "":
-                        self.serial_port.write(data)
-                        data = file.read(1)
+                file = open(filename, "rb")
+                data = file.read()
+                file.close()
+                self.serial_port.write("b")
+                self.serial_port.write(data)    # TODO: Something is completly wrong here...
             except:
                 self.edt_debug.appendPlainText("Fehler")
             self.unlock_send_buttons()
