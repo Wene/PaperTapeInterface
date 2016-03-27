@@ -27,8 +27,12 @@ class Form(QWidget):
         self.type_selector.addItem("Lochstreifen Stanzer")
         self.btn_connect = QPushButton("Verbinden")
         self.btn_connect.clicked.connect(self.connect_to_serial)
+        self.btn_simulation_mode = QPushButton("Simulationsmodus")
+        self.btn_simulation_mode.setCheckable(True)
+        self.btn_simulation_mode.setChecked(True)
         lay_connect.addWidget(self.port_selector)
         lay_connect.addWidget(self.type_selector)
+        lay_connect.addWidget(self.btn_simulation_mode)
         lay_connect.addWidget(self.btn_connect)
         lay_connect.addStretch()
 
@@ -45,7 +49,6 @@ class Form(QWidget):
         self.edt_human = QLineEdit()
         lay_punch_human.addWidget(self.edt_human)
         self.btn_punch_human = QPushButton("Lesbare Zeichen stanzen")
-        self.btn_punch_human.setEnabled(False)
         self.btn_punch_human.clicked.connect(self.punch_human_readable)
         lay_punch_human.addWidget(self.btn_punch_human)
 
@@ -58,9 +61,9 @@ class Form(QWidget):
         self.edt_filename = QLineEdit()
         lay_punch_file.addWidget(self.edt_filename)
         self.btn_punch_ascii = QPushButton("7-Bit ASCII mit Paritätsbit stanzen")
-        self.btn_punch_ascii.setEnabled(False)
+        self.btn_punch_ascii.clicked.connect(self.punch_ascii)
         self.btn_punch_binary = QPushButton("Binärdaten stanzen")
-        self.btn_punch_binary.setEnabled(False)
+        self.btn_punch_binary.clicked.connect(self.punch_binary)
         lay_punch_file.addWidget(self.btn_punch_ascii)
         lay_punch_file.addWidget(self.btn_punch_binary)
 
@@ -83,6 +86,7 @@ class Form(QWidget):
 
         # initialize all the things
         self.fill_port_selector()
+        self.lock_send_buttons()
 
         # restore settings
         self.settings = QSettings("Wene", "PaperTapeInterface")
@@ -93,6 +97,7 @@ class Form(QWidget):
             if self.port_selector.count() > port_index:
                 self.port_selector.setCurrentIndex(port_index)
         self.type_selector.setCurrentIndex(self.settings.value("Type", type=int))
+        self.btn_simulation_mode.setChecked(self.settings.value("Simulation", type=bool))
 
     # open file for punching
     def open_file(self):
@@ -101,12 +106,28 @@ class Form(QWidget):
             self.edt_filename.setText(filename)
 
     def punch_human_readable(self):
-        self.serial_read_timer.timeout.disconnect()
-        self.serial_read_timer.timeout.connect(self.read_debugging_output)
+        self.lock_send_buttons()
         self.serial_port.write("h")
-        characters = bytes(self.edt_human.text(), encoding="ascii")
+        characters = bytes(self.edt_human.text(), encoding="ascii")   # TODO: find a way to ignore non ASCII characters
         self.serial_port.write(characters)
-        #self.serial_port.write(chr(255))
+
+    def punch_ascii(self):
+        self.lock_send_buttons()
+        self.serial_port.write("a")
+
+    def punch_binary(self):
+        filename = self.edt_filename.text()
+        if filename != "":
+            try:
+                self.lock_send_buttons()
+                with open(filename, "rb") as file:
+                    data = chr("b")
+                    while data != "":
+                        self.serial_port.write(data)
+                        data = file.read(1)
+            except:
+                self.edt_debug.appendPlainText("Fehler")
+            self.unlock_send_buttons()
 
     # search for available serial ports and fill the QComboBox
     def fill_port_selector(self):
@@ -130,6 +151,7 @@ class Form(QWidget):
                 self.btn_connect.setEnabled(False)
                 self.type_selector.setEnabled(False)
                 self.port_selector.setEnabled(False)
+                self.btn_simulation_mode.setEnabled(False)
                 self.serial_port.readyRead.connect(self.serial_read)
                 self.serial_port.write(chr(255))     # send something to get the menu
             else:
@@ -146,16 +168,24 @@ class Form(QWidget):
         self.serial_read_timer.start()
 
     def read_after_connect_proceed(self):
-        # turn off simulation mode if active
-        # if "Toggle (S)imulation mode: currently on" in self.buffer:
-        #     self.serial_port.write("s")
-        # else:
-        self.btn_punch_binary.setEnabled(True)
-        self.btn_punch_ascii.setEnabled(True)
-        self.btn_punch_human.setEnabled(True)
+        self.unlock_send_buttons()
+        self.serial_read_timer.timeout.disconnect()
+        self.serial_read_timer.timeout.connect(self.read_debugging_output)
+        if self.btn_simulation_mode.isChecked():
+            # turn on simulation mode if inactive
+            if "Toggle (S)imulation mode: currently off" in self.buffer:
+                self.serial_port.write("s")
+        else:
+            # turn off simulation if active
+            if "Toggle (S)imulation mode: currently on" in self.buffer:
+                self.serial_port.write("s")
         self.read_debugging_output()
 
     def read_debugging_output(self):
+        if chr(4) in self.buffer:
+            self.buffer = self.buffer.replace(chr(4), "")
+            self.serial_port.write(chr(255))
+            self.unlock_send_buttons()
         self.edt_debug.appendPlainText(self.buffer.rstrip())
         self.buffer = ""
 
@@ -166,6 +196,17 @@ class Form(QWidget):
         self.serial_port.close()
         self.settings.setValue("Port", self.port_selector.currentIndex())
         self.settings.setValue("Type", self.type_selector.currentIndex())
+        self.settings.setValue("Simulation", self.btn_simulation_mode.isChecked())
+
+    def lock_send_buttons(self):
+        self.btn_punch_ascii.setEnabled(False)
+        self.btn_punch_binary.setEnabled(False)
+        self.btn_punch_human.setEnabled(False)
+
+    def unlock_send_buttons(self):
+        self.btn_punch_ascii.setEnabled(True)
+        self.btn_punch_binary.setEnabled(True)
+        self.btn_punch_human.setEnabled(True)
 
 if __name__ == '__main__':
     import sys
