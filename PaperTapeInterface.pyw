@@ -12,6 +12,7 @@ class Form(QWidget):
         lay_main = QVBoxLayout(self)
         self.serial_port = QSerialPort()
         self.buffer = ""
+        self.reset_needed = False
 
         self.serial_read_timer = QTimer()
         self.serial_read_timer.setInterval(10)
@@ -109,12 +110,15 @@ class Form(QWidget):
         characters = bytes(self.edt_human.text(), encoding="ascii")   # TODO: find a way to ignore non ASCII characters
         if len(characters) > 0:
             self.lock_send_buttons()
+            self.reset_needed = True
             self.serial_port.write("h")
             self.serial_port.write(characters)
 
     def punch_ascii(self):
         self.lock_send_buttons()
+        self.reset_needed = True
         self.serial_port.write("a")
+        # TODO: Implement this
 
     def punch_binary(self):
         filename = self.edt_filename.text()
@@ -125,10 +129,10 @@ class Form(QWidget):
                 data = file.read()
                 file.close()
                 self.serial_port.write("b")
-                self.serial_port.write(data)    # TODO: Something is completly wrong here...
+                self.serial_port.write(data)
             except:
-                self.edt_debug.appendPlainText("Fehler")
-            self.unlock_send_buttons()
+                self.edt_debug.appendPlainText("Fehler beim Lesen der Datei" + filename)
+                self.unlock_send_buttons()
 
     # search for available serial ports and fill the QComboBox
     def fill_port_selector(self):
@@ -185,8 +189,12 @@ class Form(QWidget):
     def read_debugging_output(self):
         if chr(4) in self.buffer:
             self.buffer = self.buffer.replace(chr(4), "")
-            self.serial_port.write(chr(255))
-            self.unlock_send_buttons()
+            if self.reset_needed:
+                self.serial_port.write(chr(255))
+                self.reset_needed = False
+                self.unlock_send_buttons()
+        if "Timeout" in self.buffer:
+                self.unlock_send_buttons()
         self.edt_debug.appendPlainText(self.buffer.rstrip())
         self.buffer = ""
 
