@@ -3,8 +3,7 @@
 from PyQt5.QtCore import *
 from PyQt5.QtSerialPort import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtWidgets import QFrame
-
+from os import path
 
 class Form(QWidget):
     def __init__(self, parent=None):
@@ -60,6 +59,7 @@ class Form(QWidget):
         self.btn_open.clicked.connect(self.open_file)
         lay_punch_file.addWidget(self.btn_open)
         self.edt_filename = QLineEdit()
+        self.edt_filename.textChanged.connect(self.update_file_size)
         lay_punch_file.addWidget(self.edt_filename)
         self.btn_punch_ascii = QPushButton("7-Bit ASCII mit Paritätsbit stanzen")
         self.btn_punch_ascii.clicked.connect(self.punch_ascii)
@@ -67,6 +67,8 @@ class Form(QWidget):
         self.btn_punch_binary.clicked.connect(self.punch_binary)
         lay_punch_file.addWidget(self.btn_punch_ascii)
         lay_punch_file.addWidget(self.btn_punch_binary)
+        self.lbl_size = QLabel("Keine Datei ausgewählt")
+        lay_main.addWidget(self.lbl_size)
 
         # horizontal line
         self.h_line_2 = QFrame()
@@ -106,6 +108,18 @@ class Form(QWidget):
         if filename != "":
             self.edt_filename.setText(filename)
 
+    def update_file_size(self):
+        filename = self.edt_filename.text()
+        try:
+            size = path.getsize(filename)
+            kb_size = size / 1024
+            length = (size * 2.54) / 1000
+            self.lbl_size.setText("Die Datei ist {:0.2f}".format(kb_size) +
+                                  " KiB gross. Das ergibt {:0.2f}".format(length) +
+                                  " Meter Lochstreifen.")
+        except:
+            self.lbl_size.setText("Keine Datei ausgewählt")
+
     def punch_human_readable(self):
         characters = bytes(self.edt_human.text(), encoding="ascii")   # TODO: find a way to ignore non ASCII characters
         if len(characters) > 0:
@@ -115,19 +129,26 @@ class Form(QWidget):
             self.serial_port.write(characters)
 
     def punch_ascii(self):
-        self.lock_send_buttons()
-        self.reset_needed = True
-        self.serial_port.write("a")
-        # TODO: Implement this
+        filename = self.edt_filename.text()
+        if filename != "":
+            self.lock_send_buttons()
+            try:
+                with open(filename, "rb") as file:
+                    data = file.read()
+                self.serial_port.write("a")
+                self.serial_port.write(data)
+                self.reset_needed = True
+            except:
+                self.edt_debug.appendPlainText("Fehler beim Lesen der Datei" + filename)
+                self.unlock_send_buttons()
 
     def punch_binary(self):
         filename = self.edt_filename.text()
         if filename != "":
             self.lock_send_buttons()
             try:
-                file = open(filename, "rb")
-                data = file.read()
-                file.close()
+                with open(filename, "rb") as file:
+                    data = file.read()
                 self.serial_port.write("b")
                 self.serial_port.write(data)
             except:
