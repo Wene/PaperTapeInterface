@@ -3,6 +3,7 @@
 from PyQt5.QtCore import *
 from PyQt5.QtSerialPort import *
 from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
 from os import path
 
 class Form(QWidget):
@@ -47,6 +48,7 @@ class Form(QWidget):
         lay_punch_human = QHBoxLayout()
         lay_main.addLayout(lay_punch_human)
         self.edt_human = QLineEdit()
+        self.edt_human.setValidator(QRegExpValidator(QRegExp(r'[A-Za-z0-9\\ !"#$%&\'()*+,-./:;<=>?@{|}~\[\]^_`]*')))
         lay_punch_human.addWidget(self.edt_human)
         self.btn_punch_human = QPushButton("Lesbare Zeichen stanzen")
         self.btn_punch_human.clicked.connect(self.punch_human_readable)
@@ -121,7 +123,7 @@ class Form(QWidget):
             self.lbl_size.setText("Keine Datei ausgewählt")
 
     def punch_human_readable(self):
-        characters = bytes(self.edt_human.text(), encoding="ascii")   # TODO: find a way to ignore non ASCII characters
+        characters = bytes(self.edt_human.text(), encoding="ascii")
         if len(characters) > 0:
             self.lock_send_buttons()
             self.reset_needed = True
