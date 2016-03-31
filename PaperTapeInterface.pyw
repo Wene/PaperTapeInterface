@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from os import path
 
+
 class Form(QWidget):
     def __init__(self, parent=None):
         super(Form, self).__init__(parent)
@@ -44,9 +45,36 @@ class Form(QWidget):
         self.h_line_1.setFrameShadow(QFrame.Sunken)
         lay_main.addWidget(self.h_line_1)
 
+        # Layout for punching mode
+        self.stack = QStackedWidget()
+        lay_main.addWidget(self.stack)
+        wid_punch = QWidget()
+        wid_reader = QWidget()
+        lay_punch = QVBoxLayout()
+        lay_reader = QVBoxLayout()
+        wid_punch.setLayout(lay_punch)
+        wid_reader.setLayout(lay_reader)
+        self.stack.addWidget(wid_reader)
+        self.stack.addWidget(wid_punch)
+        self.type_selector.currentIndexChanged.connect(self.stack.setCurrentIndex)
+
+        # TODO: Fix layout size foo
+        pol_punch = wid_punch.sizePolicy()
+        pol_punch.setVerticalPolicy(QSizePolicy.Minimum)
+        wid_punch.setSizePolicy(pol_punch)
+
+        pol_reader = wid_reader.sizePolicy()
+        pol_reader.setVerticalPolicy(QSizePolicy.Minimum)
+        wid_reader.setSizePolicy(pol_reader)
+
+        pol_stack = self.stack.sizePolicy()
+        pol_stack.setVerticalPolicy(QSizePolicy.Minimum)
+        self.stack.setSizePolicy(pol_stack)
+
         # punch human readable text section
         lay_punch_human = QHBoxLayout()
-        lay_main.addLayout(lay_punch_human)
+        lay_punch.addLayout(lay_punch_human)
+        # lay_main.addLayout(lay_punch_human)
         self.edt_human = QLineEdit()
         self.edt_human.setValidator(QRegExpValidator(QRegExp(r'[A-Za-z0-9\\ !"#$%&\'()*+,-./:;<=>?@{|}~\[\]^_`]*')))
         lay_punch_human.addWidget(self.edt_human)
@@ -56,7 +84,8 @@ class Form(QWidget):
 
         # punch file in ASCII with parity bit or binary section
         lay_punch_file = QHBoxLayout()
-        lay_main.addLayout(lay_punch_file)
+        lay_punch.addLayout(lay_punch_file)
+        # lay_main.addLayout(lay_punch_file)
         self.btn_open = QPushButton("Datei wählen...")
         self.btn_open.clicked.connect(self.open_file)
         lay_punch_file.addWidget(self.btn_open)
@@ -70,7 +99,12 @@ class Form(QWidget):
         lay_punch_file.addWidget(self.btn_punch_ascii)
         lay_punch_file.addWidget(self.btn_punch_binary)
         self.lbl_size = QLabel("Keine Datei ausgewählt")
-        lay_main.addWidget(self.lbl_size)
+        lay_punch.addWidget(self.lbl_size)
+
+
+        # Reader features
+        btn_read_ascii = QPushButton("ASCII lesen")
+        lay_reader.addWidget(btn_read_ascii)
 
         # horizontal line
         self.h_line_2 = QFrame()
