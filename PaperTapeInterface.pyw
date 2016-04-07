@@ -58,19 +58,6 @@ class Form(QWidget):
         self.stack.addWidget(wid_punch)
         self.type_selector.currentIndexChanged.connect(self.stack.setCurrentIndex)
 
-        # TODO: Fix layout size foo
-        pol_punch = wid_punch.sizePolicy()
-        pol_punch.setVerticalPolicy(QSizePolicy.Minimum)
-        wid_punch.setSizePolicy(pol_punch)
-
-        pol_reader = wid_reader.sizePolicy()
-        pol_reader.setVerticalPolicy(QSizePolicy.Minimum)
-        wid_reader.setSizePolicy(pol_reader)
-
-        pol_stack = self.stack.sizePolicy()
-        pol_stack.setVerticalPolicy(QSizePolicy.Minimum)
-        self.stack.setSizePolicy(pol_stack)
-
         # punch human readable text section
         lay_punch_human = QHBoxLayout()
         lay_punch.addLayout(lay_punch_human)
@@ -101,7 +88,6 @@ class Form(QWidget):
         self.lbl_size = QLabel("Keine Datei ausgewählt")
         lay_punch.addWidget(self.lbl_size)
 
-
         # Reader features
         btn_read_ascii = QPushButton("ASCII lesen")
         lay_reader.addWidget(btn_read_ascii)
@@ -118,6 +104,9 @@ class Form(QWidget):
         lay_main.addWidget(self.lbl_debug)
         self.edt_debug = QPlainTextEdit()
         self.edt_debug.setReadOnly(True)
+        pol_debug = self.edt_debug.sizePolicy()
+        pol_debug.setVerticalStretch(255)
+        self.edt_debug.setSizePolicy(pol_debug)
         dbg_font = self.edt_debug.font()
         dbg_font.setFamily("Courier")
         self.edt_debug.setFont(dbg_font)
