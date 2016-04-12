@@ -51,7 +51,9 @@ class Form(QWidget):
         wid_punch = QWidget()
         wid_reader = QWidget()
         lay_punch = QVBoxLayout()
+        lay_punch.setContentsMargins(0, 0, 0, 0)
         lay_reader = QVBoxLayout()
+        lay_reader.setContentsMargins(0, 0, 0, 0)
         wid_punch.setLayout(lay_punch)
         wid_reader.setLayout(lay_reader)
         self.stack.addWidget(wid_reader)
@@ -160,9 +162,13 @@ class Form(QWidget):
             try:
                 with open(filename, "rb") as file:
                     data = file.read()
-                self.serial_port.write("a")
-                self.serial_port.write(data)
-                self.reset_needed = True
+                if self.validate_ascii(data):
+                    self.serial_port.write("a")
+                    self.serial_port.write(data)
+                    self.reset_needed = True
+                else:
+                    self.edt_debug.appendPlainText("Datei enthält Zeichen die nicht als ASCII gestanzt werden können.")
+                    self.unlock_send_buttons()
             except:
                 self.edt_debug.appendPlainText("Fehler beim Lesen der Datei" + filename)
                 self.unlock_send_buttons()
@@ -243,6 +249,13 @@ class Form(QWidget):
                 self.unlock_send_buttons()
         self.edt_debug.appendPlainText(self.buffer.rstrip())
         self.buffer = ""
+
+    def validate_ascii(self, data):
+        assert isinstance(data, bytes)
+        for byte in data:
+            if not int(byte) < 128:
+                return False
+        return True
 
     # save settings
     def closeEvent(self, QCloseEvent):
