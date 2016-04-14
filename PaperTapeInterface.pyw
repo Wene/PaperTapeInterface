@@ -52,7 +52,7 @@ class Form(QWidget):
         wid_reader = QWidget()
         lay_punch = QVBoxLayout()
         lay_punch.setContentsMargins(0, 0, 0, 0)
-        lay_reader = QVBoxLayout()
+        lay_reader = QGridLayout()
         lay_reader.setContentsMargins(0, 0, 0, 0)
         wid_punch.setLayout(lay_punch)
         wid_reader.setLayout(lay_reader)
@@ -91,8 +91,13 @@ class Form(QWidget):
         lay_punch.addWidget(self.lbl_size)
 
         # Reader features
-        btn_read_ascii = QPushButton("ASCII lesen")
-        lay_reader.addWidget(btn_read_ascii)
+        btn_read_ascii = QPushButton("7 Bit ASCII lesen")
+        btn_read_bin = QPushButton("Binärdaten lesen")
+        btn_read_baudot = QPushButton("5 Bit Baudot Code lesen")
+        lay_reader.addWidget(btn_read_ascii, 0, 0)
+        lay_reader.addWidget(btn_read_bin, 1, 0)
+        lay_reader.addWidget(btn_read_baudot, 0, 1)
+        lay_reader.setRowStretch(2, 1)
 
         # horizontal line
         self.h_line_2 = QFrame()
@@ -253,7 +258,7 @@ class Form(QWidget):
     def validate_ascii(self, data):
         assert isinstance(data, bytes)
         for byte in data:
-            if not int(byte) < 128:
+            if int(byte) > 127:
                 return False
         return True
 
