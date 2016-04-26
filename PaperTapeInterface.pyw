@@ -85,8 +85,11 @@ class Form(QWidget):
         self.btn_punch_ascii.clicked.connect(self.punch_ascii)
         self.btn_punch_binary = QPushButton("Binärdaten stanzen")
         self.btn_punch_binary.clicked.connect(self.punch_binary)
+        self.btn_punch_baudot = QPushButton("5-Bit Baudot stanzen")
+        self.btn_punch_baudot.clicked.connect(self.punch_baudot)
         lay_punch_file.addWidget(self.btn_punch_ascii)
         lay_punch_file.addWidget(self.btn_punch_binary)
+        lay_punch_file.addWidget(self.btn_punch_baudot)
         self.lbl_size = QLabel("Keine Datei ausgewählt")
         lay_punch.addWidget(self.lbl_size)
 
@@ -175,7 +178,7 @@ class Form(QWidget):
                     self.edt_debug.appendPlainText("Datei enthält Zeichen die nicht als ASCII gestanzt werden können.")
                     self.unlock_send_buttons()
             except:
-                self.edt_debug.appendPlainText("Fehler beim Lesen der Datei" + filename)
+                self.edt_debug.appendPlainText("Fehler beim Lesen der Datei " + filename)
                 self.unlock_send_buttons()
 
     def punch_binary(self):
@@ -188,7 +191,25 @@ class Form(QWidget):
                 self.serial_port.write("b")
                 self.serial_port.write(data)
             except:
-                self.edt_debug.appendPlainText("Fehler beim Lesen der Datei" + filename)
+                self.edt_debug.appendPlainText("Fehler beim Lesen der Datei " + filename)
+                self.unlock_send_buttons()
+
+    def punch_baudot(self):
+        filename = self.edt_filename.text()
+        if filename != "":
+            self.lock_send_buttons()
+            try:
+                with open(filename, "rb") as file:
+                    data = file.read()
+                if self.validate_baudot(data):
+                    self.serial_port.write("5")
+                    self.serial_port.write(data)
+                    self.reset_needed = True
+                else:
+                    self.edt_debug.appendPlainText("Datei enthält Zeichen die nicht als 5-Bit Baudot gestanzt werden können.")
+                    self.unlock_send_buttons()
+            except:
+                self.edt_debug.appendPlainText("Fehler beim Leden der Datei " + filename)
                 self.unlock_send_buttons()
 
     # search for available serial ports and fill the QComboBox
@@ -262,6 +283,19 @@ class Form(QWidget):
                 return False
         return True
 
+    def validate_baudot(self, data):
+        assert isinstance(data, bytes)
+        baudot_nums = list(range(65, 91))       # lowercase letters
+        baudot_nums += list(range(97, 123))     # uppercase letters
+        baudot_nums += list(range(48, 58))      # numbers
+        baudot_nums += list(range(43, 48))      # symbols
+        baudot_nums += [13, 10, 32, 5, 7, 63, ]
+        baudot_nums += [40, 41, 60, 62, 123, 125, 91, 93]   # braces
+        for byte in data:
+            if not int(byte) in baudot_nums:
+                return False
+        return True
+
     # save settings
     def closeEvent(self, QCloseEvent):
         self.settings.setValue("Position", self.pos())
@@ -275,11 +309,13 @@ class Form(QWidget):
         self.btn_punch_ascii.setEnabled(False)
         self.btn_punch_binary.setEnabled(False)
         self.btn_punch_human.setEnabled(False)
+        self.btn_punch_baudot.setEnabled(False)
 
     def unlock_send_buttons(self):
         self.btn_punch_ascii.setEnabled(True)
         self.btn_punch_binary.setEnabled(True)
         self.btn_punch_human.setEnabled(True)
+        self.btn_punch_baudot.setEnabled(True)
 
 if __name__ == '__main__':
     import sys
