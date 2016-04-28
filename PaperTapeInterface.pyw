@@ -47,7 +47,6 @@ class Form(QWidget):
 
         # Layout for punching mode
         self.stack = QStackedWidget()
-        lay_main.addWidget(self.stack)
         wid_punch = QWidget()
         wid_reader = QWidget()
         lay_punch = QVBoxLayout()
@@ -60,6 +59,16 @@ class Form(QWidget):
         self.stack.addWidget(wid_punch)
         self.type_selector.currentIndexChanged.connect(self.stack.setCurrentIndex)
 
+        # punch file in ASCII with parity bit or binary section
+        lay_file = QHBoxLayout()
+        lay_main.addLayout(lay_file)
+        self.lbl_size = QLabel("Keine Datei ausgewählt")
+        lay_main.addWidget(self.lbl_size)
+        lay_main.addWidget(self.stack)
+
+        lay_punch_buttons = QHBoxLayout()
+        lay_punch.addLayout(lay_punch_buttons)
+
         # punch human readable text section
         lay_punch_human = QHBoxLayout()
         lay_punch.addLayout(lay_punch_human)
@@ -71,35 +80,35 @@ class Form(QWidget):
         self.btn_punch_human.clicked.connect(self.punch_human_readable)
         lay_punch_human.addWidget(self.btn_punch_human)
 
-        # punch file in ASCII with parity bit or binary section
-        lay_punch_file = QHBoxLayout()
-        lay_punch.addLayout(lay_punch_file)
-        # lay_main.addLayout(lay_punch_file)
         self.btn_open = QPushButton("Datei wählen...")
         self.btn_open.clicked.connect(self.open_file)
-        lay_punch_file.addWidget(self.btn_open)
+        lay_file.addWidget(self.btn_open)
         self.edt_filename = QLineEdit()
         self.edt_filename.textChanged.connect(self.update_file_size)
-        lay_punch_file.addWidget(self.edt_filename)
+        lay_file.addWidget(self.edt_filename)
         self.btn_punch_ascii = QPushButton("7-Bit ASCII mit Paritätsbit stanzen")
         self.btn_punch_ascii.clicked.connect(self.punch_ascii)
         self.btn_punch_binary = QPushButton("Binärdaten stanzen")
         self.btn_punch_binary.clicked.connect(self.punch_binary)
         self.btn_punch_baudot = QPushButton("5-Bit Baudot stanzen")
         self.btn_punch_baudot.clicked.connect(self.punch_baudot)
-        lay_punch_file.addWidget(self.btn_punch_ascii)
-        lay_punch_file.addWidget(self.btn_punch_binary)
-        lay_punch_file.addWidget(self.btn_punch_baudot)
-        self.lbl_size = QLabel("Keine Datei ausgewählt")
-        lay_punch.addWidget(self.lbl_size)
+        lay_punch_buttons.addWidget(self.btn_punch_ascii)
+        lay_punch_buttons.addWidget(self.btn_punch_binary)
+        lay_punch_buttons.addWidget(self.btn_punch_baudot)
 
         # Reader features
-        btn_read_ascii = QPushButton("7 Bit ASCII lesen")
-        btn_read_bin = QPushButton("Binärdaten lesen")
-        btn_read_baudot = QPushButton("5 Bit Baudot Code lesen")
-        lay_reader.addWidget(btn_read_ascii, 0, 0)
-        lay_reader.addWidget(btn_read_bin, 1, 0)
-        lay_reader.addWidget(btn_read_baudot, 0, 1)
+        self.btn_read_ascii = QPushButton("7 Bit ASCII lesen")
+        self.btn_read_ascii.clicked.connect(self.read_ascii)
+        self.btn_read_bin = QPushButton("Binärdaten lesen")
+        self.btn_read_bin.clicked.connect(self.read_binary)
+        self.btn_read_baudot = QPushButton("5 Bit Baudot Code lesen")
+        self.btn_read_baudot.clicked.connect(self.read_baudot)
+        self.btn_read_debug = QPushButton("Lesen im Debugging- Modus")
+        self.btn_read_debug.clicked.connect(self.read_debug)
+        lay_reader.addWidget(self.btn_read_ascii, 0, 0)
+        lay_reader.addWidget(self.btn_read_bin, 1, 0)
+        lay_reader.addWidget(self.btn_read_baudot, 0, 1)
+        lay_reader.addWidget(self.btn_read_debug, 1, 1)
         lay_reader.setRowStretch(2, 1)
 
         # horizontal line
@@ -212,6 +221,18 @@ class Form(QWidget):
                 self.edt_debug.appendPlainText("Fehler beim Leden der Datei " + filename)
                 self.unlock_send_buttons()
 
+    def read_ascii(self):
+        self.serial_port.write("a")
+
+    def read_binary(self):
+        self.serial_port.write("b")
+
+    def read_baudot(self):
+        self.serial_port.write("5")
+
+    def read_debug(self):
+        self.serial_port.write("d")
+
     # search for available serial ports and fill the QComboBox
     def fill_port_selector(self):
         self.port_selector.clear()
@@ -310,12 +331,20 @@ class Form(QWidget):
         self.btn_punch_binary.setEnabled(False)
         self.btn_punch_human.setEnabled(False)
         self.btn_punch_baudot.setEnabled(False)
+        self.btn_read_baudot.setEnabled(False)
+        self.btn_read_bin.setEnabled(False)
+        self.btn_read_ascii.setEnabled(False)
+        self.btn_read_debug.setEnabled(False)
 
     def unlock_send_buttons(self):
         self.btn_punch_ascii.setEnabled(True)
         self.btn_punch_binary.setEnabled(True)
         self.btn_punch_human.setEnabled(True)
         self.btn_punch_baudot.setEnabled(True)
+        self.btn_read_baudot.setEnabled(True)
+        self.btn_read_bin.setEnabled(True)
+        self.btn_read_ascii.setEnabled(True)
+        self.btn_read_debug.setEnabled(True)
 
 if __name__ == '__main__':
     import sys
