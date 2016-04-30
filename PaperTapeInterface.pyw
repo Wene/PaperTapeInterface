@@ -16,7 +16,7 @@ class Form(QWidget):
         self.reset_needed = False
 
         self.serial_read_timer = QTimer()
-        self.serial_read_timer.setInterval(10)
+        self.serial_read_timer.setInterval(50)
         self.serial_read_timer.setSingleShot(True)
         self.serial_read_timer.timeout.connect(self.read_after_connect_proceed)
 
@@ -148,7 +148,10 @@ class Form(QWidget):
 
     # open file for punching
     def open_file(self):
-        filename, _ = QFileDialog.getOpenFileName(self, "Datei auswählen")
+        if self.type_selector.currentIndex() == 1:      # punch mode
+            filename, _ = QFileDialog.getOpenFileName(self, "Datei auswählen")
+        else:
+            filename, _ = QFileDialog.getSaveFileName(self, "Datei anlegen")
         if filename != "":
             self.edt_filename.setText(filename)
 
@@ -274,7 +277,10 @@ class Form(QWidget):
     def read_after_connect_proceed(self):
         self.unlock_send_buttons()
         self.serial_read_timer.timeout.disconnect()
-        self.serial_read_timer.timeout.connect(self.read_debugging_output)
+        if self.type_selector.currentIndex() == 0:
+            self.serial_read_timer.timeout.connect(self.read_reader_output)
+        else:
+            self.serial_read_timer.timeout.connect(self.read_puncher_debugging_output)
         if self.btn_simulation_mode.isChecked():
             # turn on simulation mode if inactive
             if "Toggle (S)imulation mode: currently off" in self.buffer:
@@ -283,9 +289,9 @@ class Form(QWidget):
             # turn off simulation if active
             if "Toggle (S)imulation mode: currently on" in self.buffer:
                 self.serial_port.write("s")
-        self.read_debugging_output()
+        self.read_puncher_debugging_output()
 
-    def read_debugging_output(self):
+    def read_puncher_debugging_output(self):
         if chr(4) in self.buffer:
             self.buffer = self.buffer.replace(chr(4), "")
             if self.reset_needed:
@@ -295,6 +301,17 @@ class Form(QWidget):
         if "Timeout" in self.buffer:
                 self.unlock_send_buttons()
         self.edt_debug.appendPlainText(self.buffer.rstrip())
+        self.buffer = ""
+
+    def read_reader_output(self):
+        filename = self.edt_filename.text()
+        if filename != "":
+            try:
+                with open(filename, "ab") as file:
+                    file.write(self.buffer)
+            except:
+                self.edt_debug.appendPlainText("Fehler beim Schreiben der Datei " + filename)
+        self.edt_debug.appendPlainText(self.buffer)
         self.buffer = ""
 
     def validate_ascii(self, data):
