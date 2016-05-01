@@ -12,11 +12,12 @@ class Form(QWidget):
         super(Form, self).__init__(parent)
         lay_main = QVBoxLayout(self)
         self.serial_port = QSerialPort()
-        self.buffer = ""
+        self.buffer = bytearray(b'')
         self.reset_needed = False
 
         self.serial_read_timer = QTimer()
-        self.serial_read_timer.setInterval(50)
+        # 20 ms is the punching interval - 15 ms timeout to be sure, each byte is displayed after one interval
+        self.serial_read_timer.setInterval(15)
         self.serial_read_timer.setSingleShot(True)
         self.serial_read_timer.timeout.connect(self.read_after_connect_proceed)
 
@@ -269,9 +270,8 @@ class Form(QWidget):
     # This slot is called whenever new data is available for read.
     def serial_read(self):
         data = self.serial_port.read(self.serial_port.bytesAvailable())
-        assert isinstance(data, bytes)
-        for character in data:
-            self.buffer += str(chr(character))
+        for byte in data:
+            self.buffer.append(byte)
         self.serial_read_timer.start()
 
     def read_after_connect_proceed(self):
@@ -283,25 +283,25 @@ class Form(QWidget):
             self.serial_read_timer.timeout.connect(self.read_puncher_debugging_output)
         if self.btn_simulation_mode.isChecked():
             # turn on simulation mode if inactive
-            if "Toggle (S)imulation mode: currently off" in self.buffer:
+            if b"Toggle (S)imulation mode: currently off" in self.buffer:
                 self.serial_port.write("s")
         else:
             # turn off simulation if active
-            if "Toggle (S)imulation mode: currently on" in self.buffer:
+            if b"Toggle (S)imulation mode: currently on" in self.buffer:
                 self.serial_port.write("s")
         self.read_puncher_debugging_output()
 
     def read_puncher_debugging_output(self):
-        if chr(4) in self.buffer:
-            self.buffer = self.buffer.replace(chr(4), "")
+        if 4 in self.buffer:
+            self.buffer.remove(4)
             if self.reset_needed:
                 self.serial_port.write(chr(255))
                 self.reset_needed = False
                 self.unlock_send_buttons()
-        if "Timeout" in self.buffer:
+        if b"Timeout" in self.buffer:
                 self.unlock_send_buttons()
-        self.edt_debug.appendPlainText(self.buffer.rstrip())
-        self.buffer = ""
+        self.edt_debug.appendPlainText(self.buffer.decode('ascii').rstrip())
+        self.buffer.clear()
 
     def read_reader_output(self):
         filename = self.edt_filename.text()
@@ -311,8 +311,8 @@ class Form(QWidget):
                     file.write(self.buffer)
             except:
                 self.edt_debug.appendPlainText("Fehler beim Schreiben der Datei " + filename)
-        self.edt_debug.appendPlainText(self.buffer)
-        self.buffer = ""
+        self.edt_debug.appendPlainText(str(self.buffer))
+        self.buffer.clear()
 
     def validate_ascii(self, data):
         assert isinstance(data, bytes)
