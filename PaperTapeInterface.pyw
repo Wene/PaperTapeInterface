@@ -16,7 +16,7 @@ class Form(QWidget):
         self.reset_needed = False
 
         self.serial_read_timer = QTimer()
-        # 20 ms is the punching interval - 15 ms timeout to be sure, each byte is displayed after one interval
+        # 20 ms is the punching interval - 10 ms timeout to be sure, each byte is displayed after one interval
         self.serial_read_timer.setInterval(15)
         self.serial_read_timer.setSingleShot(True)
         self.serial_read_timer.timeout.connect(self.read_after_connect_proceed)
@@ -106,11 +106,19 @@ class Form(QWidget):
         self.btn_read_baudot.clicked.connect(self.read_baudot)
         self.btn_read_debug = QPushButton("Lesen im Debugging- Modus")
         self.btn_read_debug.clicked.connect(self.read_debug)
-        lay_reader.addWidget(self.btn_read_ascii, 0, 0)
-        lay_reader.addWidget(self.btn_read_bin, 1, 0)
-        lay_reader.addWidget(self.btn_read_baudot, 0, 1)
-        lay_reader.addWidget(self.btn_read_debug, 1, 1)
-        lay_reader.setRowStretch(2, 1)
+        lay_reader.addWidget(self.btn_read_ascii, 1, 0)
+        lay_reader.addWidget(self.btn_read_bin, 1, 1)
+        lay_reader.addWidget(self.btn_read_baudot, 1, 2)
+        lay_reader.addWidget(self.btn_read_debug, 1, 3)
+        self.btn_read_to_file = QPushButton("Aufzeichnung in Datei aktivieren (anhängen)")
+        self.btn_read_to_file.setCheckable(True)
+        self.btn_read_to_file.setChecked(False)
+        self.btn_read_to_file.setEnabled(False)
+        lay_reader.addWidget(self.btn_read_to_file, 0, 0, 1, 2)
+        self.btn_leave_read_mode = QPushButton("Aktuellen Lesemodus verlassen")
+        self.btn_leave_read_mode.clicked.connect(self.read_menu)
+        self.btn_leave_read_mode.setEnabled(False)
+        lay_reader.addWidget(self.btn_leave_read_mode, 0, 2, 1, 2)
 
         # horizontal line
         self.h_line_2 = QFrame()
@@ -134,7 +142,7 @@ class Form(QWidget):
 
         # initialize all the things
         self.fill_port_selector()
-        self.lock_send_buttons()
+        self.lock_buttons()
 
         # restore settings
         self.settings = QSettings("Wene", "PaperTapeInterface")
@@ -171,7 +179,7 @@ class Form(QWidget):
     def punch_human_readable(self):
         characters = bytes(self.edt_human.text(), encoding="ascii")
         if len(characters) > 0:
-            self.lock_send_buttons()
+            self.lock_buttons()
             self.reset_needed = True
             self.serial_port.write("h")
             self.serial_port.write(characters)
@@ -179,7 +187,7 @@ class Form(QWidget):
     def punch_ascii(self):
         filename = self.edt_filename.text()
         if filename != "":
-            self.lock_send_buttons()
+            self.lock_buttons()
             try:
                 with open(filename, "rb") as file:
                     data = file.read()
@@ -189,15 +197,15 @@ class Form(QWidget):
                     self.reset_needed = True
                 else:
                     self.edt_debug.appendPlainText("Datei enthält Zeichen die nicht als ASCII gestanzt werden können.")
-                    self.unlock_send_buttons()
+                    self.unlock_buttons()
             except:
                 self.edt_debug.appendPlainText("Fehler beim Lesen der Datei " + filename)
-                self.unlock_send_buttons()
+                self.unlock_buttons()
 
     def punch_binary(self):
         filename = self.edt_filename.text()
         if filename != "":
-            self.lock_send_buttons()
+            self.lock_buttons()
             try:
                 with open(filename, "rb") as file:
                     data = file.read()
@@ -205,12 +213,12 @@ class Form(QWidget):
                 self.serial_port.write(data)
             except:
                 self.edt_debug.appendPlainText("Fehler beim Lesen der Datei " + filename)
-                self.unlock_send_buttons()
+                self.unlock_buttons()
 
     def punch_baudot(self):
         filename = self.edt_filename.text()
         if filename != "":
-            self.lock_send_buttons()
+            self.lock_buttons()
             try:
                 with open(filename, "rb") as file:
                     data = file.read()
@@ -220,22 +228,30 @@ class Form(QWidget):
                     self.reset_needed = True
                 else:
                     self.edt_debug.appendPlainText("Datei enthält Zeichen die nicht als 5-Bit Baudot gestanzt werden können.")
-                    self.unlock_send_buttons()
+                    self.unlock_buttons()
             except:
                 self.edt_debug.appendPlainText("Fehler beim Leden der Datei " + filename)
-                self.unlock_send_buttons()
+                self.unlock_buttons()
 
     def read_ascii(self):
+        self.lock_buttons()
         self.serial_port.write("a")
 
     def read_binary(self):
+        self.lock_buttons()
         self.serial_port.write("b")
 
     def read_baudot(self):
+        self.lock_buttons()
         self.serial_port.write("5")
 
     def read_debug(self):
+        self.lock_buttons()
         self.serial_port.write("d")
+
+    def read_menu(self):
+        self.serial_port.write(chr(255))
+        self.unlock_buttons()
 
     # search for available serial ports and fill the QComboBox
     def fill_port_selector(self):
@@ -275,7 +291,7 @@ class Form(QWidget):
         self.serial_read_timer.start()
 
     def read_after_connect_proceed(self):
-        self.unlock_send_buttons()
+        self.unlock_buttons()
         self.serial_read_timer.timeout.disconnect()
         if self.type_selector.currentIndex() == 0:
             self.serial_read_timer.timeout.connect(self.read_reader_output)
@@ -297,21 +313,21 @@ class Form(QWidget):
             if self.reset_needed:
                 self.serial_port.write(chr(255))
                 self.reset_needed = False
-                self.unlock_send_buttons()
+                self.unlock_buttons()
         if b"Timeout" in self.buffer:
-                self.unlock_send_buttons()
+                self.unlock_buttons()
         self.edt_debug.appendPlainText(self.buffer.decode('ascii').rstrip())
         self.buffer.clear()
 
     def read_reader_output(self):
         filename = self.edt_filename.text()
-        if filename != "":
+        if filename != "" and self.btn_read_to_file.isChecked():
             try:
                 with open(filename, "ab") as file:
                     file.write(self.buffer)
             except:
                 self.edt_debug.appendPlainText("Fehler beim Schreiben der Datei " + filename)
-        self.edt_debug.appendPlainText(str(self.buffer))
+        self.edt_debug.appendPlainText(self.buffer.decode('ascii').rstrip())
         self.buffer.clear()
 
     def validate_ascii(self, data):
@@ -343,7 +359,7 @@ class Form(QWidget):
         self.settings.setValue("Type", self.type_selector.currentIndex())
         self.settings.setValue("Simulation", self.btn_simulation_mode.isChecked())
 
-    def lock_send_buttons(self):
+    def lock_buttons(self):
         self.btn_punch_ascii.setEnabled(False)
         self.btn_punch_binary.setEnabled(False)
         self.btn_punch_human.setEnabled(False)
@@ -353,7 +369,7 @@ class Form(QWidget):
         self.btn_read_ascii.setEnabled(False)
         self.btn_read_debug.setEnabled(False)
 
-    def unlock_send_buttons(self):
+    def unlock_buttons(self):
         self.btn_punch_ascii.setEnabled(True)
         self.btn_punch_binary.setEnabled(True)
         self.btn_punch_human.setEnabled(True)
@@ -362,6 +378,8 @@ class Form(QWidget):
         self.btn_read_bin.setEnabled(True)
         self.btn_read_ascii.setEnabled(True)
         self.btn_read_debug.setEnabled(True)
+        self.btn_leave_read_mode.setEnabled(True)
+        self.btn_read_to_file.setEnabled(True)
 
 if __name__ == '__main__':
     import sys
