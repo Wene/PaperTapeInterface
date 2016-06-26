@@ -343,7 +343,7 @@ class Form(QWidget):
         baudot_nums += list(range(97, 123))     # uppercase letters
         baudot_nums += list(range(48, 58))      # numbers
         baudot_nums += list(range(43, 48))      # symbols
-        baudot_nums += [13, 10, 32, 5, 7, 63, ]
+        baudot_nums += [13, 10, 32, 5, 7, 63, 72, 75]
         baudot_nums += [40, 41, 60, 62, 123, 125, 91, 93]   # braces
         for byte in data:
             if not int(byte) in baudot_nums:
