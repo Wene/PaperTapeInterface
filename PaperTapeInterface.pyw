@@ -267,7 +267,10 @@ class Form(QWidget):
         port = self.port_selector.currentData()
         if isinstance(port, QSerialPortInfo):
             self.serial_port.setPort(port)
-            self.serial_port.setBaudRate(115200)
+            if self.type_selector.currentIndex() == 0:
+                self.serial_port.setBaudRate(115200)
+            else:
+                self.serial_port.setBaudRate(38400)
             self.serial_port.setFlowControl(QSerialPort.SoftwareControl)
             connected = self.serial_port.open(QIODevice.ReadWrite)
             if connected:
@@ -343,7 +346,7 @@ class Form(QWidget):
         baudot_nums += list(range(97, 123))     # uppercase letters
         baudot_nums += list(range(48, 58))      # numbers
         baudot_nums += list(range(43, 48))      # symbols
-        baudot_nums += [13, 10, 32, 5, 7, 63, 58, 61]
+        baudot_nums += [13, 10, 32, 5, 7, 63, 58, 61, 39]
         baudot_nums += [40, 41, 60, 62, 123, 125, 91, 93]   # braces
         for byte in data:
             if not int(byte) in baudot_nums:
