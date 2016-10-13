@@ -29,6 +29,7 @@ class Form(QWidget):
         self.type_selector.addItem("Lochstreifen Leser")
         self.type_selector.addItem("Lochstreifen Stanzer")
         self.btn_connect = QPushButton("Verbinden")
+        self.btn_connect.setCheckable(True)
         self.btn_connect.clicked.connect(self.connect_to_serial)
         self.btn_simulation_mode = QPushButton("Simulationsmodus")
         self.btn_simulation_mode.setCheckable(True)
@@ -264,27 +265,36 @@ class Form(QWidget):
             self.port_selector.addItem(port_name, port)
 
     def connect_to_serial(self):
-        port = self.port_selector.currentData()
-        if isinstance(port, QSerialPortInfo):
-            self.serial_port.setPort(port)
-            if self.type_selector.currentIndex() == 0:
-                self.serial_port.setBaudRate(115200)
+        if self.btn_connect.isChecked():
+            port = self.port_selector.currentData()
+            if isinstance(port, QSerialPortInfo):
+                self.serial_port.setPort(port)
+                if self.type_selector.currentIndex() == 0:
+                    self.serial_port.setBaudRate(115200)
+                else:
+                    self.serial_port.setBaudRate(38400)
+                self.serial_port.setFlowControl(QSerialPort.SoftwareControl)
+                connected = self.serial_port.open(QIODevice.ReadWrite)
+                if connected:
+                    self.edt_debug.appendPlainText("Verbunden")
+                    self.type_selector.setEnabled(False)
+                    self.port_selector.setEnabled(False)
+                    self.btn_simulation_mode.setEnabled(False)
+                    self.serial_port.readyRead.connect(self.serial_read)
+                    self.serial_port.write(chr(255))     # send something to get the menu
+                else:
+                    self.edt_debug.appendPlainText("Fehler")
             else:
-                self.serial_port.setBaudRate(38400)
-            self.serial_port.setFlowControl(QSerialPort.SoftwareControl)
-            connected = self.serial_port.open(QIODevice.ReadWrite)
-            if connected:
-                self.edt_debug.appendPlainText("Verbunden")
-                self.btn_connect.setEnabled(False)
-                self.type_selector.setEnabled(False)
-                self.port_selector.setEnabled(False)
-                self.btn_simulation_mode.setEnabled(False)
-                self.serial_port.readyRead.connect(self.serial_read)
-                self.serial_port.write(chr(255))     # send something to get the menu
-            else:
-                self.edt_debug.appendPlainText("Fehler")
+                self.edt_debug.appendPlainText("kein gültiger Port")
         else:
-            self.edt_debug.appendPlainText("kein gültiger Port")
+            self.serial_port.close()
+            self.edt_debug.appendPlainText("Verbindung getrennt")
+            self.port_selector.setEnabled(True)
+            self.type_selector.setEnabled(True)
+            self.btn_simulation_mode.setEnabled(True)
+            self.lock_buttons()
+            self.serial_read_timer.timeout.disconnect()
+            self.serial_read_timer.timeout.connect(self.read_after_connect_proceed)
 
     # This slot is called whenever new data is available for read.
     def serial_read(self):
