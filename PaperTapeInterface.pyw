@@ -159,10 +159,11 @@ class Form(QWidget):
     # open file for punching
     def open_file(self):
         if self.type_selector.currentIndex() == 1:      # punch mode
-            filename, _ = QFileDialog.getOpenFileName(self, "Datei auswählen")
+            filename, _ = QFileDialog.getOpenFileName(self, "Datei auswählen", self.settings.value("lastDir", ""))
         else:
-            filename, _ = QFileDialog.getSaveFileName(self, "Datei anlegen")
+            filename, _ = QFileDialog.getSaveFileName(self, "Datei anlegen", self.settings.value("lastDir", ""))
         if filename != "":
+            self.settings.setValue("lastDir", path.dirname(filename))
             self.edt_filename.setText(filename)
 
     def update_file_size(self):
