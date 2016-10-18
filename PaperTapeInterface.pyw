@@ -273,9 +273,10 @@ class Form(QWidget):
                 self.serial_port.setPort(port)
                 if self.type_selector.currentIndex() == 0:
                     self.serial_port.setBaudRate(115200)
+                    self.serial_port.setFlowControl(QSerialPort.NoFlowControl)
                 else:
                     self.serial_port.setBaudRate(38400)
-                self.serial_port.setFlowControl(QSerialPort.SoftwareControl)
+                    self.serial_port.setFlowControl(QSerialPort.SoftwareControl)
                 connected = self.serial_port.open(QIODevice.ReadWrite)
                 if connected:
                     self.edt_debug.appendPlainText("Verbunden")
@@ -331,7 +332,10 @@ class Form(QWidget):
                 self.unlock_buttons()
         if b"Timeout" in self.buffer:
                 self.unlock_buttons()
-        self.edt_debug.appendPlainText(self.buffer.decode('ascii').rstrip())
+        try:
+            self.edt_debug.appendPlainText(self.buffer.decode('ascii').rstrip())
+        except:
+            pass
         self.buffer.clear()
 
     def read_reader_output(self):
@@ -344,7 +348,10 @@ class Form(QWidget):
             except:
                 self.edt_debug.appendPlainText("Fehler beim Schreiben der Datei " + filename)
         else:
-            self.edt_debug.appendPlainText(self.buffer.decode('ascii').rstrip())
+            try:
+                self.edt_debug.appendPlainText(self.buffer.decode('ascii').rstrip())
+            except:
+                pass
             self.buffer.clear()
 
     def validate_ascii(self, data):
