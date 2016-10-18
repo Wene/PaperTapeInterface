@@ -5,6 +5,7 @@ from PyQt5.QtSerialPort import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from os import path
+import time
 
 
 class Form(QWidget):
@@ -339,10 +340,12 @@ class Form(QWidget):
             try:
                 with open(filename, "ab") as file:
                     file.write(self.buffer)
+                    self.buffer.clear()
             except:
                 self.edt_debug.appendPlainText("Fehler beim Schreiben der Datei " + filename)
-        self.edt_debug.appendPlainText(self.buffer.decode('ascii').rstrip())
-        self.buffer.clear()
+        else:
+            self.edt_debug.appendPlainText(self.buffer.decode('ascii').rstrip())
+            self.buffer.clear()
 
     def validate_ascii(self, data):
         assert isinstance(data, bytes)
