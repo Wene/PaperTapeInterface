@@ -184,7 +184,7 @@ class Form(QWidget):
         if len(characters) > 0:
             self.lock_buttons()
             self.reset_needed = True
-            self.serial_port.write("h")
+            self.serial_port.write(b"h")
             self.serial_port.write(characters)
 
     def punch_ascii(self):
@@ -195,7 +195,7 @@ class Form(QWidget):
                 with open(filename, "rb") as file:
                     data = file.read()
                 if self.validate_ascii(data):
-                    self.serial_port.write("a")
+                    self.serial_port.write(b"a")
                     self.serial_port.write(data)
                     self.reset_needed = True
                 else:
@@ -212,7 +212,7 @@ class Form(QWidget):
             try:
                 with open(filename, "rb") as file:
                     data = file.read()
-                self.serial_port.write("b")
+                self.serial_port.write(b"b")
                 self.serial_port.write(data)
             except:
                 self.edt_debug.appendPlainText("Fehler beim Lesen der Datei " + filename)
@@ -226,7 +226,7 @@ class Form(QWidget):
                 with open(filename, "rb") as file:
                     data = file.read()
                 if self.validate_baudot(data):
-                    self.serial_port.write("5")
+                    self.serial_port.write(b"5")
                     self.serial_port.write(data)
                     self.reset_needed = True
                 else:
@@ -238,22 +238,22 @@ class Form(QWidget):
 
     def read_ascii(self):
         self.lock_buttons()
-        self.serial_port.write("a")
+        self.serial_port.write(b"a")
 
     def read_binary(self):
         self.lock_buttons()
-        self.serial_port.write("b")
+        self.serial_port.write(b"b")
 
     def read_baudot(self):
         self.lock_buttons()
-        self.serial_port.write("5")
+        self.serial_port.write(b"5")
 
     def read_debug(self):
         self.lock_buttons()
-        self.serial_port.write("d")
+        self.serial_port.write(b"d")
 
     def read_menu(self):
-        self.serial_port.write(chr(255))
+        self.serial_port.write(b"\255")
         self.unlock_buttons()
 
     # search for available serial ports and fill the QComboBox
@@ -284,7 +284,7 @@ class Form(QWidget):
                     self.port_selector.setEnabled(False)
                     self.btn_simulation_mode.setEnabled(False)
                     self.serial_port.readyRead.connect(self.serial_read)
-                    self.serial_port.write(chr(255))     # send something to get the menu
+                    self.serial_port.write(b"\255")     # send something to get the menu
                 else:
                     self.edt_debug.appendPlainText("Fehler")
             else:
@@ -316,22 +316,22 @@ class Form(QWidget):
         if self.btn_simulation_mode.isChecked():
             # turn on simulation mode if inactive
             if b"Toggle (S)imulation mode: currently off" in self.buffer:
-                self.serial_port.write("s")
+                self.serial_port.write(b"s")
         else:
             # turn off simulation if active
             if b"Toggle (S)imulation mode: currently on" in self.buffer:
-                self.serial_port.write("s")
+                self.serial_port.write(b"s")
         self.read_puncher_debugging_output()
 
     def read_puncher_debugging_output(self):
         if 4 in self.buffer:
             self.buffer.remove(4)
             if self.reset_needed:
-                self.serial_port.write(chr(255))
+                self.serial_port.write(b"\255")
                 self.reset_needed = False
                 self.unlock_buttons()
         if b"Timeout" in self.buffer:
-                self.unlock_buttons()
+            self.unlock_buttons()
         try:
             self.edt_debug.appendPlainText(self.buffer.decode('ascii').rstrip())
         except:
