@@ -17,8 +17,7 @@ class Form(QWidget):
         self.reset_needed = False
 
         self.serial_read_timer = QTimer()
-        # 20 ms is the punching interval - 10 ms timeout to be sure, each byte is displayed after one interval
-        self.serial_read_timer.setInterval(15)
+        self.serial_read_timer.setInterval(100)
         self.serial_read_timer.setSingleShot(True)
         self.serial_read_timer.timeout.connect(self.read_after_connect_proceed)
 
@@ -297,6 +296,7 @@ class Form(QWidget):
             self.btn_simulation_mode.setEnabled(True)
             self.lock_buttons()
             self.serial_read_timer.timeout.disconnect()
+            self.serial_read_timer.setInterval(100)
             self.serial_read_timer.timeout.connect(self.read_after_connect_proceed)
 
     # This slot is called whenever new data is available for read.
@@ -321,6 +321,8 @@ class Form(QWidget):
             # turn off simulation if active
             if b"Toggle (S)imulation mode: currently on" in self.buffer:
                 self.serial_port.write(b"s")
+        # 20 ms is the punching interval - 10 ms timeout to be sure, each byte is displayed after one interval
+        self.serial_read_timer.setInterval(18)
         self.read_puncher_debugging_output()
 
     def read_puncher_debugging_output(self):
